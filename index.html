@@ -739,8 +739,8 @@
                 <th>順位</th>
                 <th>団体名</th>
                 <th>部門</th>
-                <th class="number">合計点</th>
                 <th class="number">平均点</th>
+                <th class="number">合計点</th>
                 <th class="number">審査済</th>
               </tr>
             </thead>
@@ -1160,15 +1160,15 @@
           const average = reviewed ? (total / reviewed).toFixed(1) : "0.0";
           return { group, total, reviewed, average };
         })
-        .sort((a, b) => b.total - a.total || a.group.name.localeCompare(b.group.name, "ja"));
+        .sort((a, b) => Number(b.average) - Number(a.average) || b.total - a.total || a.group.name.localeCompare(b.group.name, "ja"));
 
       $("#rankingBody").innerHTML = rows.map((row, index) => `
         <tr>
           <td><span class="rank">${index + 1}</span></td>
           <td><strong>${escapeHtml(row.group.name)}</strong></td>
           <td>${divisions[row.group.division]}</td>
-          <td class="number">${row.total}</td>
           <td class="number">${row.average}</td>
+          <td class="number">${row.total}</td>
           <td class="number">${row.reviewed}/${state.judges.length}</td>
         </tr>
       `).join("") || `<tr><td colspan="6" class="empty">表示できる団体がありません。</td></tr>`;
@@ -1369,8 +1369,8 @@
         "順位",
         "団体名",
         "部門",
-        "合計点",
         "平均点",
+        "合計点",
         "審査済数",
         ...state.judges.map((judge) => `${judge} 合計点（加重後）`),
         ...state.judges.map((judge) => `${judge} メモ`)
@@ -1387,13 +1387,13 @@
           const judgeMemos = state.judges.map((judge) => getMemo(group.id, judge));
           return { group, total, average, reviewed, judgeTotals, judgeMemos };
         })
-        .sort((a, b) => b.total - a.total || a.group.name.localeCompare(b.group.name, "ja"))
+        .sort((a, b) => Number(b.average) - Number(a.average) || b.total - a.total || a.group.name.localeCompare(b.group.name, "ja"))
         .map((row, index) => [
           index + 1,
           row.group.name,
           divisions[row.group.division],
-          row.total,
           row.average,
+          row.total,
           `${row.reviewed}/${state.judges.length}`,
           ...row.judgeTotals,
           ...row.judgeMemos
