@@ -732,6 +732,7 @@
   <script>
     const STORAGE_KEY = "machizukuri-review-app-v1";
     const SELECTED_JUDGE_KEY = "machizukuri-review-selected-judge";
+    const SELECTED_JUDGE_SESSION_KEY = "machizukuri-review-selected-judge-session";
     const ACCESS_CODE_KEY = "machizukuri-review-access-code";
     const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyljPgW-MMgWfwx3jBObU2eNuF_r8aFwFuSrtiAKX8s-Udi1LbwGHj4wzokPgNZePK1Wg/exec";
     const USE_GOOGLE_SHEETS = APPS_SCRIPT_URL.startsWith("https://");
@@ -773,7 +774,7 @@
 
     function normalizeState(rawState) {
       const fallback = defaultState();
-      const localJudge = localStorage.getItem(SELECTED_JUDGE_KEY);
+      const localJudge = sessionStorage.getItem(SELECTED_JUDGE_SESSION_KEY) || localStorage.getItem(SELECTED_JUDGE_KEY);
       const nextState = {
         ...fallback,
         ...rawState,
@@ -809,6 +810,7 @@
 
     function saveState(options = {}) {
       localStorage.setItem(SELECTED_JUDGE_KEY, state.selectedJudge);
+      sessionStorage.setItem(SELECTED_JUDGE_SESSION_KEY, state.selectedJudge);
       const sharedState = {
         judges: state.judges,
         criteria: state.criteria,
@@ -970,6 +972,10 @@
     }
 
     function renderJudgeSelect() {
+      const selectedJudge = sessionStorage.getItem(SELECTED_JUDGE_SESSION_KEY) || localStorage.getItem(SELECTED_JUDGE_KEY) || state.selectedJudge;
+      if (state.judges.includes(selectedJudge)) {
+        state.selectedJudge = selectedJudge;
+      }
       $("#judgeSelect").innerHTML = state.judges
         .map((judge) => `<option value="${escapeHtml(judge)}">${escapeHtml(judge)}</option>`)
         .join("");
@@ -1249,6 +1255,7 @@
       state.memos = renameKeys(state.memos);
       state.selectedJudge = selectedIndex >= 0 ? newJudges[selectedIndex] : newJudges[0];
       localStorage.setItem(SELECTED_JUDGE_KEY, state.selectedJudge);
+      sessionStorage.setItem(SELECTED_JUDGE_SESSION_KEY, state.selectedJudge);
       setSaving(true);
       try {
         await saveState();
@@ -1345,6 +1352,7 @@
     $("#judgeSelect").addEventListener("change", (event) => {
       state.selectedJudge = event.target.value;
       localStorage.setItem(SELECTED_JUDGE_KEY, state.selectedJudge);
+      sessionStorage.setItem(SELECTED_JUDGE_SESSION_KEY, state.selectedJudge);
       render();
     });
 
@@ -1370,7 +1378,11 @@
       if (currentView !== "review" && currentView !== "ranking") return;
       const selectedJudge = state.selectedJudge;
       state = await loadState();
-      state.selectedJudge = selectedJudge;
+      if (state.judges.includes(selectedJudge)) {
+        state.selectedJudge = selectedJudge;
+        localStorage.setItem(SELECTED_JUDGE_KEY, selectedJudge);
+        sessionStorage.setItem(SELECTED_JUDGE_SESSION_KEY, selectedJudge);
+      }
       render();
     }
 
