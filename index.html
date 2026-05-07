@@ -639,11 +639,18 @@
   </style>
 </head>
 <body>
-  <div class="auth-lock hidden" id="authLock">
+  <div class="auth-lock" id="authLock">
     <div class="auth-card">
-      <h1>パスコード確認</h1>
-      <p id="authMessage">審査用パスコードを入力してください。</p>
-      <button class="btn" id="retryAuthBtn">もう一度入力</button>
+      <h1>まちづくりチャレンジ事業</h1>
+      <p>審査アプリにログインします。</p>
+      <form class="grid" id="loginForm">
+        <div class="field">
+          <label for="passcodeInput">パスコード</label>
+          <input type="password" id="passcodeInput" autocomplete="current-password" placeholder="パスコードを入力">
+        </div>
+        <p id="authMessage">事務局用または審査員用のパスコードを入力してください。</p>
+        <button class="btn" type="submit" id="loginBtn">ログイン</button>
+      </form>
     </div>
   </div>
 
@@ -829,6 +836,7 @@
     let appRole = "judge";
     let isAuthenticated = false;
     let isSaving = false;
+    let refreshTimerId = null;
 
     const $ = (selector) => document.querySelector(selector);
     const $$ = (selector) => Array.from(document.querySelectorAll(selector));
@@ -848,9 +856,8 @@
       return nextState;
     }
 
-    async function loadState() {
+    async function loadState(accessCode = getAccessCode()) {
       if (USE_GOOGLE_SHEETS) {
-        const accessCode = getAccessCode();
         const data = await jsonp(`${APPS_SCRIPT_URL}?action=state&passcode=${encodeURIComponent(accessCode)}`);
         if (data && data.error) {
           sessionStorage.removeItem(ACCESS_CODE_KEY);
@@ -894,9 +901,9 @@
     function getAccessCode() {
       let code = sessionStorage.getItem(ACCESS_CODE_KEY);
       if (!code) {
-        code = window.prompt("審査用パスコードを入力してください。");
+        code = $("#passcodeInput").value.trim();
         if (!code) throw new Error("パスコードが入力されていません。");
-        sessionStorage.setItem(ACCESS_CODE_KEY, code.trim());
+        sessionStorage.setItem(ACCESS_CODE_KEY, code);
       }
       return code;
     }
@@ -975,12 +982,13 @@
       });
     }
 
-    function showAuthLock(message) {
+    function showAuthLock(message = "事務局用または審査員用のパスコードを入力してください。") {
       isAuthenticated = false;
       $("#appShell").classList.add("hidden");
       $("#judgeLock").classList.add("hidden");
       $("#authMessage").textContent = message;
       $("#authLock").classList.remove("hidden");
+      $("#passcodeInput").focus();
     }
 
     function showApp() {
@@ -1006,12 +1014,14 @@
 
     function logout() {
       sessionStorage.removeItem(ACCESS_CODE_KEY);
+      sessionStorage.removeItem(SELECTED_JUDGE_SESSION_KEY);
       appRole = "judge";
       currentView = "review";
       isAuthenticated = false;
       $("#appShell").classList.add("hidden");
       $("#judgeLock").classList.add("hidden");
-      init();
+      $("#passcodeInput").value = "";
+      showAuthLock();
     }
 
     function scoreKey(groupId, judge) {
@@ -1452,9 +1462,26 @@
     });
     $("#exportBtn").addEventListener("click", exportCsv);
     $("#resetBtn").addEventListener("click", () => resetAll().catch((error) => showToast(error.message)));
-    $("#retryAuthBtn").addEventListener("click", () => {
-      sessionStorage.removeItem(ACCESS_CODE_KEY);
-      init();
+    $("#loginForm").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const code = $("#passcodeInput").value.trim();
+      if (!code) {
+        showAuthLock("パスコードを入力してください。");
+        return;
+      }
+      $("#loginBtn").disabled = true;
+      $("#loginBtn").textContent = "確認中...";
+      try {
+        sessionStorage.setItem(ACCESS_CODE_KEY, code);
+        state = await loadState(code);
+        showJudgeLock();
+      } catch (error) {
+        sessionStorage.removeItem(ACCESS_CODE_KEY);
+        showAuthLock(error.message);
+      } finally {
+        $("#loginBtn").disabled = false;
+        $("#loginBtn").textContent = "ログイン";
+      }
     });
     $("#logoutBtn").addEventListener("click", logout);
     $("#entryLogoutBtn").addEventListener("click", logout);
@@ -1488,23 +1515,33 @@
       if (!USE_GOOGLE_SHEETS) {
         $("#storageNote").textContent = "Google Apps ScriptのURLが未設定です。設定するまでは、このブラウザ内にだけ保存されます。";
       }
+      const savedCode = sessionStorage.getItem(ACCESS_CODE_KEY);
+      if (!savedCode) {
+        showAuthLock();
+        return;
+      }
+      $("#passcodeInput").value = savedCode;
       try {
-        state = await loadState();
-        const selectedJudge = sessionStorage.getItem(SELECTED_JUDGE_SESSION_KEY);
-        if (selectedJudge && state.judges.includes(selectedJudge)) {
-          state.selectedJudge = selectedJudge;
-          showApp();
-          render();
-        } else {
-          showJudgeLock();
-        }
-        if (USE_GOOGLE_SHEETS) {
-          window.setInterval(() => {
-            refreshSharedState().catch(() => {});
-          }, 5000);
-        }
+        state = await loadState(savedCode);
       } catch (error) {
+        sessionStorage.removeItem(ACCESS_CODE_KEY);
         showAuthLock(error.message);
+        return;
+      }
+
+      const selectedJudge = sessionStorage.getItem(SELECTED_JUDGE_SESSION_KEY);
+      if (selectedJudge && state.judges.includes(selectedJudge)) {
+        state.selectedJudge = selectedJudge;
+        showApp();
+        render();
+      } else {
+        showJudgeLock();
+      }
+      if (USE_GOOGLE_SHEETS) {
+        if (refreshTimerId) window.clearInterval(refreshTimerId);
+        refreshTimerId = window.setInterval(() => {
+          refreshSharedState().catch(() => {});
+        }, 5000);
       }
     }
 
