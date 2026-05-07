@@ -512,6 +512,25 @@
       transform: translateY(0);
     }
 
+    .switching-overlay {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      background: rgba(246, 247, 249, .72);
+      backdrop-filter: blur(2px);
+      z-index: 30;
+    }
+
+    .switching-message {
+      background: #17202d;
+      color: #fff;
+      border-radius: 8px;
+      padding: 13px 16px;
+      box-shadow: var(--shadow);
+      font-weight: 700;
+    }
+
     .auth-lock {
       min-height: 100vh;
       display: grid;
@@ -735,6 +754,9 @@
   </div>
 
   <div class="toast" id="toast"></div>
+  <div class="switching-overlay hidden" id="switchingOverlay">
+    <div class="switching-message">審査員変更中...</div>
+  </div>
 
   <script>
     const STORAGE_KEY = "machizukuri-review-app-v1";
@@ -905,6 +927,14 @@
       toast.textContent = message;
       toast.classList.add("show");
       window.setTimeout(() => toast.classList.remove("show"), 2200);
+    }
+
+    function showSwitchingOverlay() {
+      $("#switchingOverlay").classList.remove("hidden");
+    }
+
+    function hideSwitchingOverlay() {
+      $("#switchingOverlay").classList.add("hidden");
     }
 
     function setSaving(isActive, message = "保存中...") {
@@ -1372,11 +1402,14 @@
       });
     });
 
-    $("#judgeSelect").addEventListener("change", (event) => {
+    $("#judgeSelect").addEventListener("change", async (event) => {
+      showSwitchingOverlay();
       state.selectedJudge = event.target.value;
       localStorage.setItem(SELECTED_JUDGE_KEY, state.selectedJudge);
       sessionStorage.setItem(SELECTED_JUDGE_SESSION_KEY, state.selectedJudge);
+      await new Promise((resolve) => window.setTimeout(resolve, 180));
       render();
+      hideSwitchingOverlay();
     });
 
     $("#divisionFilter").addEventListener("change", renderGroupCards);
