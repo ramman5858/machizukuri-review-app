@@ -642,13 +642,6 @@
     </main>
   </div>
 
-  <iframe
-    id="appsScriptPostTarget"
-    name="appsScriptPostTarget"
-    title="保存処理"
-    style="position: fixed; left: -9999px; top: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; border: 0;"
-  ></iframe>
-
   <div class="modal-backdrop hidden" id="scoreModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
     <div class="modal">
       <div class="panel-head">
@@ -805,56 +798,25 @@
     }
 
     function postToAppsScript(payload) {
-      return new Promise((resolve, reject) => {
-        const iframe = $("#appsScriptPostTarget");
+      const body = new URLSearchParams();
+      body.set("payload", JSON.stringify(payload));
+      body.set("passcode", getAccessCode());
 
-        const form = document.createElement("form");
-        form.method = "POST";
-        form.action = APPS_SCRIPT_URL;
-        form.target = "appsScriptPostTarget";
-        form.style.position = "fixed";
-        form.style.left = "-9999px";
-        form.style.top = "0";
-        form.style.width = "1px";
-        form.style.height = "1px";
-        form.style.opacity = "0";
-
-        const payloadInput = document.createElement("input");
-        payloadInput.type = "hidden";
-        payloadInput.name = "payload";
-        payloadInput.value = JSON.stringify(payload);
-        form.appendChild(payloadInput);
-
-        const passcodeInput = document.createElement("input");
-        passcodeInput.type = "hidden";
-        passcodeInput.name = "passcode";
-        passcodeInput.value = getAccessCode();
-        form.appendChild(passcodeInput);
-
-        const timeout = window.setTimeout(() => {
-          cleanup();
-          reject(new Error("Google Sheetsへ保存できませんでした。"));
-        }, 12000);
-
-        function cleanup() {
-          window.clearTimeout(timeout);
-          form.remove();
-          iframe.removeEventListener("load", handleLoad);
+      return fetch(APPS_SCRIPT_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"
+        },
+        body
+      }).then(() => {
+        // Apps Script cross-origin POST responses are opaque in no-cors mode.
+        // Reloading shortly after save lets the sheet become the source of truth.
+        if (USE_GOOGLE_SHEETS) {
+          window.setTimeout(() => {
+            refreshSharedState().catch(() => {});
+          }, 900);
         }
-
-        let submitted = false;
-        function handleLoad() {
-          if (!submitted) return;
-          cleanup();
-          resolve();
-        }
-
-        iframe.addEventListener("load", handleLoad);
-        document.body.appendChild(form);
-        window.setTimeout(() => {
-          submitted = true;
-          form.submit();
-        }, 0);
       });
     }
 
