@@ -146,6 +146,12 @@
       line-height: 1.55;
     }
 
+    .logout-btn {
+      width: 100%;
+      justify-content: center;
+      margin-top: 12px;
+    }
+
     main {
       padding: 26px;
       display: grid;
@@ -622,6 +628,7 @@
       <div class="side-note" id="storageNote">
         入力した点数はGoogle Sheetsに保存されます。再度同じ団体を開くと、審査内容を修正できます。
       </div>
+      <button class="btn secondary logout-btn" id="logoutBtn">ログアウト</button>
     </aside>
 
     <main>
@@ -925,6 +932,15 @@
       isAuthenticated = true;
       $("#authLock").classList.add("hidden");
       $("#appShell").classList.remove("hidden");
+    }
+
+    function logout() {
+      sessionStorage.removeItem(ACCESS_CODE_KEY);
+      appRole = "judge";
+      currentView = "review";
+      isAuthenticated = false;
+      $("#appShell").classList.add("hidden");
+      init();
     }
 
     function scoreKey(groupId, judge) {
@@ -1372,6 +1388,7 @@
       sessionStorage.removeItem(ACCESS_CODE_KEY);
       init();
     });
+    $("#logoutBtn").addEventListener("click", logout);
 
     async function refreshSharedState() {
       if (!USE_GOOGLE_SHEETS || !$("#scoreModal").classList.contains("hidden")) return;
