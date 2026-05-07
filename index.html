@@ -1,0 +1,1231 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>まちづくりチャレンジ事業 審査アプリ</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f7f9;
+      --panel: #ffffff;
+      --line: #d9dee7;
+      --text: #1e2530;
+      --muted: #697385;
+      --brand: #1f7a68;
+      --brand-dark: #146052;
+      --accent: #b94f2f;
+      --soft: #eef6f3;
+      --warn: #fff4dd;
+      --shadow: 0 10px 24px rgba(31, 42, 55, .08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Yu Gothic", "Hiragino Kaku Gothic ProN", Meiryo, system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    button, input, select {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      cursor: pointer;
+    }
+
+    .app-shell {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 280px 1fr;
+    }
+
+    .sidebar {
+      background: #ffffff;
+      border-right: 1px solid var(--line);
+      padding: 22px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow: auto;
+    }
+
+    .brand {
+      display: grid;
+      gap: 6px;
+      margin-bottom: 22px;
+    }
+
+    .brand h1 {
+      font-size: 20px;
+      line-height: 1.35;
+      margin: 0;
+      letter-spacing: 0;
+    }
+
+    .brand p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .field {
+      display: grid;
+      gap: 7px;
+      margin-bottom: 16px;
+    }
+
+    label {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    select, input[type="text"], input[type="number"] {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      padding: 10px 11px;
+      color: var(--text);
+      min-height: 42px;
+    }
+
+    input[type="number"] {
+      text-align: center;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 110px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      padding: 10px 11px;
+      color: var(--text);
+      resize: vertical;
+      line-height: 1.6;
+      font: inherit;
+    }
+
+    .nav {
+      display: grid;
+      gap: 8px;
+      margin: 20px 0;
+    }
+
+    .nav button {
+      text-align: left;
+      padding: 11px 12px;
+      border-radius: 8px;
+      color: var(--text);
+      background: transparent;
+      border: 1px solid transparent;
+      font-weight: 700;
+    }
+
+    .nav button.active {
+      background: var(--soft);
+      color: var(--brand-dark);
+      border-color: #c8e1d9;
+    }
+
+    .side-note {
+      background: var(--warn);
+      border: 1px solid #f2d491;
+      border-radius: 8px;
+      padding: 12px;
+      color: #6d5015;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    main {
+      padding: 26px;
+      display: grid;
+      gap: 18px;
+      align-content: start;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+    }
+
+    .page-title h2 {
+      margin: 0 0 6px;
+      font-size: 26px;
+      letter-spacing: 0;
+    }
+
+    .page-title p {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+
+    .btn {
+      min-height: 40px;
+      padding: 9px 13px;
+      border-radius: 8px;
+      background: var(--brand);
+      color: #fff;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+
+    .btn.secondary {
+      color: var(--text);
+      background: #fff;
+      border: 1px solid var(--line);
+    }
+
+    .btn.edit {
+      color: #4d3600;
+      background: #ffd45a;
+      border: 1px solid #e4b93b;
+    }
+
+    .btn.danger {
+      background: var(--accent);
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .stat {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      box-shadow: var(--shadow);
+    }
+
+    .stat b {
+      display: block;
+      font-size: 24px;
+      margin-bottom: 4px;
+    }
+
+    .stat span {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .panel-head {
+      padding: 16px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .panel-head h3 {
+      margin: 0;
+      font-size: 18px;
+    }
+
+    .panel-body {
+      padding: 16px;
+    }
+
+    .grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .group-grid {
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    }
+
+    .group-card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      display: grid;
+      gap: 10px;
+      background: #fff;
+    }
+
+    .group-card header {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      padding: 4px 9px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--brand-dark);
+      background: var(--soft);
+      border: 1px solid #c8e1d9;
+      white-space: nowrap;
+    }
+
+    .pill.start {
+      color: #1d5579;
+      background: #e7f3fb;
+      border-color: #add5ee;
+    }
+
+    .pill.general {
+      color: #73520c;
+      background: #fff3cf;
+      border-color: #edcf7d;
+    }
+
+    .pill.collab {
+      color: #6e3b68;
+      background: #f7e9f6;
+      border-color: #deb6da;
+    }
+
+    .score-state {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .score-state.done {
+      color: var(--brand-dark);
+      font-weight: 700;
+    }
+
+    .score-form {
+      display: grid;
+      gap: 14px;
+    }
+
+    .criteria-row {
+      display: grid;
+      grid-template-columns: 1fr 120px;
+      gap: 14px;
+      align-items: center;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    .criteria-row strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .criteria-row span {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 11px 10px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: middle;
+    }
+
+    th {
+      color: var(--muted);
+      font-size: 13px;
+      background: #fbfcfd;
+    }
+
+    td.number, th.number {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .rank {
+      width: 44px;
+      height: 32px;
+      border-radius: 999px;
+      background: var(--soft);
+      color: var(--brand-dark);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .empty {
+      color: var(--muted);
+      text-align: center;
+      padding: 28px 12px;
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(18, 24, 33, .48);
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      z-index: 10;
+    }
+
+    .modal {
+      width: min(760px, 100%);
+      max-height: 90vh;
+      overflow: auto;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 22px 60px rgba(0, 0, 0, .24);
+      border: 1px solid var(--line);
+    }
+
+    .toast {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      background: #17202d;
+      color: #fff;
+      border-radius: 8px;
+      padding: 12px 14px;
+      box-shadow: var(--shadow);
+      opacity: 0;
+      transform: translateY(8px);
+      pointer-events: none;
+      transition: .2s ease;
+      z-index: 20;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (max-width: 860px) {
+      .app-shell {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        position: static;
+        height: auto;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      main {
+        padding: 18px;
+      }
+
+      .topbar {
+        display: grid;
+      }
+
+      .actions {
+        justify-content: flex-start;
+      }
+
+      .stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .criteria-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .stats {
+        grid-template-columns: 1fr;
+      }
+
+      th, td {
+        padding: 9px 7px;
+        font-size: 13px;
+      }
+
+      .btn {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <h1>まちづくりチャレンジ事業<br>審査アプリ</h1>
+        <p>17団体・5名審査員・3部門対応</p>
+      </div>
+
+      <div class="field">
+        <label for="judgeSelect">審査員</label>
+        <select id="judgeSelect"></select>
+      </div>
+
+      <nav class="nav" aria-label="画面切り替え">
+        <button class="active" data-view="review">審査入力</button>
+        <button data-view="ranking">集計ランキング</button>
+        <button data-view="groups">団体設定</button>
+        <button data-view="criteria">審査項目設定</button>
+        <button data-view="judges">審査員設定</button>
+      </nav>
+
+      <div class="side-note" id="storageNote">
+        入力した点数はGoogle Sheetsに保存されます。再度同じ団体を開くと、審査内容を修正できます。
+      </div>
+    </aside>
+
+    <main>
+      <section class="topbar">
+        <div class="page-title">
+          <h2 id="pageTitle">審査入力</h2>
+          <p id="pageLead">団体を選び、審査員ごとに点数を入力します。</p>
+        </div>
+        <div class="actions">
+          <button class="btn secondary" id="exportBtn">CSV出力</button>
+          <button class="btn danger" id="resetBtn">全データ初期化</button>
+        </div>
+      </section>
+
+      <section class="stats" id="stats"></section>
+
+      <section class="panel" id="reviewView">
+        <div class="panel-head">
+          <h3>審査する団体</h3>
+          <select id="divisionFilter" aria-label="部門で絞り込み">
+            <option value="all">すべての部門</option>
+            <option value="start">スタート部門</option>
+            <option value="general">一般部門</option>
+            <option value="collab">団体連携部門</option>
+          </select>
+        </div>
+        <div class="panel-body">
+          <div class="grid group-grid" id="groupCards"></div>
+        </div>
+      </section>
+
+      <section class="panel hidden" id="rankingView">
+        <div class="panel-head">
+          <h3>点数順</h3>
+          <select id="rankingFilter" aria-label="ランキング部門">
+            <option value="all">すべての部門</option>
+            <option value="start">スタート部門</option>
+            <option value="general">一般部門</option>
+            <option value="collab">団体連携部門</option>
+          </select>
+        </div>
+        <div class="panel-body">
+          <table>
+            <thead>
+              <tr>
+                <th>順位</th>
+                <th>団体名</th>
+                <th>部門</th>
+                <th class="number">合計点</th>
+                <th class="number">平均点</th>
+                <th class="number">審査済</th>
+              </tr>
+            </thead>
+            <tbody id="rankingBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel hidden" id="groupsView">
+        <div class="panel-head">
+          <h3>団体設定</h3>
+          <button class="btn" id="saveGroupsBtn">保存</button>
+        </div>
+        <div class="panel-body">
+          <div class="grid" id="groupSettings"></div>
+        </div>
+      </section>
+
+      <section class="panel hidden" id="criteriaView">
+        <div class="panel-head">
+          <h3>審査項目設定</h3>
+          <button class="btn" id="saveCriteriaBtn">保存</button>
+        </div>
+        <div class="panel-body">
+          <div class="grid" id="criteriaSettings"></div>
+        </div>
+      </section>
+
+      <section class="panel hidden" id="judgesView">
+        <div class="panel-head">
+          <h3>審査員設定</h3>
+          <button class="btn" id="saveJudgesBtn">保存</button>
+        </div>
+        <div class="panel-body">
+          <div class="grid" id="judgeSettings"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal-backdrop hidden" id="scoreModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal">
+      <div class="panel-head">
+        <div>
+          <h3 id="modalTitle">審査入力</h3>
+          <p id="modalMeta" style="margin: 6px 0 0; color: var(--muted);"></p>
+        </div>
+        <button class="btn secondary" id="closeModalBtn">閉じる</button>
+      </div>
+      <div class="panel-body">
+        <form class="score-form" id="scoreForm"></form>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const STORAGE_KEY = "machizukuri-review-app-v1";
+    const SELECTED_JUDGE_KEY = "machizukuri-review-selected-judge";
+    const ACCESS_CODE_KEY = "machizukuri-review-access-code";
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyljPgW-MMgWfwx3jBObU2eNuF_r8aFwFuSrtiAKX8s-Udi1LbwGHj4wzokPgNZePK1Wg/exec";
+    const USE_GOOGLE_SHEETS = APPS_SCRIPT_URL.startsWith("https://");
+
+    const divisions = {
+      start: "スタート部門",
+      general: "一般部門",
+      collab: "団体連携部門"
+    };
+
+    const defaultCriteria = {
+      start: ["公益性", "実現性", "発展性", "将来性", "事業費"],
+      general: ["公益性", "協働性", "実現性", "発展性", "創造性", "費用対効果"],
+      collab: ["公益性", "協働性", "実現性", "発展性", "創造性", "費用対効果"]
+    };
+
+    const defaultState = () => ({
+      judges: ["審査員1", "審査員2", "審査員3", "審査員4", "審査員5"],
+      selectedJudge: "審査員1",
+      criteria: structuredClone(defaultCriteria),
+      groups: Array.from({ length: 17 }, (_, i) => ({
+        id: `group-${i + 1}`,
+        name: `団体${i + 1}`,
+        division: i < 6 ? "start" : i < 12 ? "general" : "collab"
+      })),
+      scores: {},
+      memos: {}
+    });
+
+    let state = defaultState();
+    let currentView = "review";
+    let activeGroupId = null;
+
+    const $ = (selector) => document.querySelector(selector);
+    const $$ = (selector) => Array.from(document.querySelectorAll(selector));
+
+    function normalizeState(rawState) {
+      const fallback = defaultState();
+      const localJudge = localStorage.getItem(SELECTED_JUDGE_KEY);
+      const nextState = {
+        ...fallback,
+        ...rawState,
+        criteria: { ...fallback.criteria, ...(rawState && rawState.criteria ? rawState.criteria : {}) },
+        selectedJudge: localJudge || fallback.selectedJudge
+      };
+      if (!nextState.judges.includes(nextState.selectedJudge)) {
+        nextState.selectedJudge = nextState.judges[0];
+      }
+      return nextState;
+    }
+
+    async function loadState() {
+      if (USE_GOOGLE_SHEETS) {
+        const accessCode = getAccessCode();
+        const data = await jsonp(`${APPS_SCRIPT_URL}?action=state&passcode=${encodeURIComponent(accessCode)}`);
+        if (data && data.error) {
+          sessionStorage.removeItem(ACCESS_CODE_KEY);
+          throw new Error(data.error);
+        }
+        return normalizeState(data);
+      }
+
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return normalizeState(defaultState());
+      try {
+        return normalizeState(JSON.parse(raw));
+      } catch {
+        return normalizeState(defaultState());
+      }
+    }
+
+    function saveState() {
+      localStorage.setItem(SELECTED_JUDGE_KEY, state.selectedJudge);
+      const sharedState = {
+        judges: state.judges,
+        criteria: state.criteria,
+        groups: state.groups,
+        scores: state.scores,
+        memos: state.memos
+      };
+      if (USE_GOOGLE_SHEETS) {
+        return postToAppsScript(sharedState);
+      }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      return Promise.resolve();
+    }
+
+    function getAccessCode() {
+      let code = sessionStorage.getItem(ACCESS_CODE_KEY);
+      if (!code) {
+        code = window.prompt("審査用パスコードを入力してください。");
+        if (!code) throw new Error("パスコードが入力されていません。");
+        sessionStorage.setItem(ACCESS_CODE_KEY, code.trim());
+      }
+      return code;
+    }
+
+    function jsonp(url) {
+      return new Promise((resolve, reject) => {
+        const callbackName = `machizukuriCallback${Date.now()}${Math.floor(Math.random() * 100000)}`;
+        const script = document.createElement("script");
+        const separator = url.includes("?") ? "&" : "?";
+        const timeout = window.setTimeout(() => {
+          cleanup();
+          reject(new Error("Google Sheetsからデータを読み込めませんでした。"));
+        }, 12000);
+
+        function cleanup() {
+          window.clearTimeout(timeout);
+          delete window[callbackName];
+          script.remove();
+        }
+
+        window[callbackName] = (data) => {
+          cleanup();
+          resolve(data);
+        };
+
+        script.onerror = () => {
+          cleanup();
+          reject(new Error("Google Apps Scriptに接続できませんでした。"));
+        };
+        script.src = `${url}${separator}callback=${callbackName}`;
+        document.body.appendChild(script);
+      });
+    }
+
+    function postToAppsScript(sharedState) {
+      return new Promise((resolve, reject) => {
+        const iframeName = `machizukuriPostFrame${Date.now()}`;
+        const iframe = document.createElement("iframe");
+        iframe.name = iframeName;
+        iframe.className = "hidden";
+
+        const form = document.createElement("form");
+        form.method = "POST";
+        form.action = APPS_SCRIPT_URL;
+        form.target = iframeName;
+        form.className = "hidden";
+
+        const payloadInput = document.createElement("input");
+        payloadInput.type = "hidden";
+        payloadInput.name = "payload";
+        payloadInput.value = JSON.stringify(sharedState);
+        form.appendChild(payloadInput);
+
+        const passcodeInput = document.createElement("input");
+        passcodeInput.type = "hidden";
+        passcodeInput.name = "passcode";
+        passcodeInput.value = getAccessCode();
+        form.appendChild(passcodeInput);
+
+        const timeout = window.setTimeout(() => {
+          cleanup();
+          reject(new Error("Google Sheetsへ保存できませんでした。"));
+        }, 12000);
+
+        function cleanup() {
+          window.clearTimeout(timeout);
+          form.remove();
+          iframe.remove();
+        }
+
+        iframe.addEventListener("load", () => {
+          cleanup();
+          resolve();
+        });
+
+        document.body.appendChild(iframe);
+        document.body.appendChild(form);
+        form.submit();
+      });
+    }
+
+    function showToast(message) {
+      const toast = $("#toast");
+      toast.textContent = message;
+      toast.classList.add("show");
+      window.setTimeout(() => toast.classList.remove("show"), 2200);
+    }
+
+    function scoreKey(groupId, judge) {
+      return `${groupId}::${judge}`;
+    }
+
+    function getScores(groupId, judge) {
+      const group = state.groups.find((item) => item.id === groupId);
+      const scores = state.scores[scoreKey(groupId, judge)] || null;
+      if (!group || !scores) return scores;
+      return scores.slice(0, state.criteria[group.division].length);
+    }
+
+    function getMemo(groupId, judge) {
+      return state.memos[scoreKey(groupId, judge)] || "";
+    }
+
+    function getGroupTotal(groupId) {
+      const group = state.groups.find((item) => item.id === groupId);
+      const limit = group ? state.criteria[group.division].length : 0;
+      return Object.entries(state.scores)
+        .filter(([key]) => key.startsWith(`${groupId}::`))
+        .reduce((sum, [, values]) => {
+          return sum + values.slice(0, limit).reduce((a, b) => a + Number(b || 0), 0);
+        }, 0);
+    }
+
+    function getReviewedCount(groupId) {
+      return Object.keys(state.scores).filter((key) => key.startsWith(`${groupId}::`)).length;
+    }
+
+    function getMaxScore(group) {
+      return state.criteria[group.division].length * 10 * state.judges.length;
+    }
+
+    function render() {
+      renderJudgeSelect();
+      renderStats();
+      renderViews();
+      renderGroupCards();
+      renderRanking();
+      renderGroupSettings();
+      renderCriteriaSettings();
+      renderJudgeSettings();
+    }
+
+    function renderJudgeSelect() {
+      $("#judgeSelect").innerHTML = state.judges
+        .map((judge) => `<option value="${escapeHtml(judge)}">${escapeHtml(judge)}</option>`)
+        .join("");
+      $("#judgeSelect").value = state.selectedJudge;
+    }
+
+    function renderStats() {
+      const reviewedPairs = Object.keys(state.scores).length;
+      const totalPairs = state.groups.length * state.judges.length;
+      const completedGroups = state.groups.filter((group) => getReviewedCount(group.id) === state.judges.length).length;
+      const top = [...state.groups].sort((a, b) => getGroupTotal(b.id) - getGroupTotal(a.id))[0];
+      $("#stats").innerHTML = `
+        <div class="stat"><b>${state.groups.length}</b><span>団体数</span></div>
+        <div class="stat"><b>${state.judges.length}</b><span>審査員数</span></div>
+        <div class="stat"><b>${reviewedPairs}/${totalPairs}</b><span>入力済み審査</span></div>
+        <div class="stat"><b>${completedGroups}</b><span>全員審査済み団体</span></div>
+      `;
+    }
+
+    function renderViews() {
+      const titles = {
+        review: ["審査入力", "団体を選び、審査員ごとに点数を入力します。"],
+        ranking: ["集計ランキング", "団体ごとの合計点を点数順に表示します。"],
+        groups: ["団体設定", "団体名と応募部門を変更できます。"],
+        criteria: ["審査項目設定", "部門ごとの審査項目名を変更できます。"],
+        judges: ["審査員設定", "審査員名を変更できます。"]
+      };
+
+      $$(".nav button").forEach((button) => {
+        button.classList.toggle("active", button.dataset.view === currentView);
+      });
+      ["review", "ranking", "groups", "criteria", "judges"].forEach((view) => {
+        $(`#${view}View`).classList.toggle("hidden", view !== currentView);
+      });
+      $("#pageTitle").textContent = titles[currentView][0];
+      $("#pageLead").textContent = titles[currentView][1];
+    }
+
+    function renderGroupCards() {
+      const filter = $("#divisionFilter").value;
+      const groups = state.groups.filter((group) => filter === "all" || group.division === filter);
+      $("#groupCards").innerHTML = groups.map((group) => {
+        const scores = getScores(group.id, state.selectedJudge);
+        const judgeTotal = scores ? scores.reduce((a, b) => a + b, 0) : 0;
+        const memoStatus = getMemo(group.id, state.selectedJudge).trim() ? "・メモあり" : "";
+        const status = scores ? `入力済み ${judgeTotal}点${memoStatus}` : `未入力${memoStatus}`;
+        const buttonText = scores ? "点数を修正" : "審査する";
+        return `
+          <article class="group-card">
+            <header>
+              <strong>${escapeHtml(group.name)}</strong>
+              <span class="pill ${group.division}">${divisions[group.division]}</span>
+            </header>
+            <div class="score-state ${scores ? "done" : ""}">${escapeHtml(state.selectedJudge)}：${status}</div>
+            <button class="btn ${scores ? "edit" : ""}" data-score-group="${group.id}">${buttonText}</button>
+          </article>
+        `;
+      }).join("") || `<div class="empty">該当する団体がありません。</div>`;
+
+      $$("[data-score-group]").forEach((button) => {
+        button.addEventListener("click", () => openScoreModal(button.dataset.scoreGroup));
+      });
+    }
+
+    function renderRanking() {
+      const filter = $("#rankingFilter").value;
+      const rows = state.groups
+        .filter((group) => filter === "all" || group.division === filter)
+        .map((group) => {
+          const total = getGroupTotal(group.id);
+          const reviewed = getReviewedCount(group.id);
+          const average = reviewed ? (total / reviewed).toFixed(1) : "0.0";
+          return { group, total, reviewed, average };
+        })
+        .sort((a, b) => b.total - a.total || a.group.name.localeCompare(b.group.name, "ja"));
+
+      $("#rankingBody").innerHTML = rows.map((row, index) => `
+        <tr>
+          <td><span class="rank">${index + 1}</span></td>
+          <td><strong>${escapeHtml(row.group.name)}</strong></td>
+          <td>${divisions[row.group.division]}</td>
+          <td class="number">${row.total}</td>
+          <td class="number">${row.average}</td>
+          <td class="number">${row.reviewed}/${state.judges.length}</td>
+        </tr>
+      `).join("") || `<tr><td colspan="6" class="empty">表示できる団体がありません。</td></tr>`;
+    }
+
+    function renderGroupSettings() {
+      $("#groupSettings").innerHTML = state.groups.map((group, index) => `
+        <div class="criteria-row">
+          <div>
+            <strong>${index + 1}. 団体</strong>
+            <input type="text" data-group-name="${group.id}" value="${escapeAttr(group.name)}" aria-label="団体名">
+          </div>
+          <select data-group-division="${group.id}" aria-label="部門">
+            ${Object.entries(divisions).map(([value, label]) =>
+              `<option value="${value}" ${group.division === value ? "selected" : ""}>${label}</option>`
+            ).join("")}
+          </select>
+        </div>
+      `).join("");
+    }
+
+    function renderCriteriaSettings() {
+      $("#criteriaSettings").innerHTML = Object.entries(divisions).map(([division, label]) => `
+        <div class="panel" style="box-shadow: none;">
+          <div class="panel-head"><h3>${label}</h3><span class="pill ${division}">${state.criteria[division].length}項目・各10点</span></div>
+          <div class="panel-body grid">
+            ${state.criteria[division].map((criterion, index) => `
+              <div class="field">
+                <label>${index + 1}項目目</label>
+                <input type="text" data-criterion="${division}:${index}" value="${escapeAttr(criterion)}">
+              </div>
+            `).join("")}
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function renderJudgeSettings() {
+      $("#judgeSettings").innerHTML = state.judges.map((judge, index) => `
+        <div class="field">
+          <label>${index + 1}人目</label>
+          <input type="text" data-judge-index="${index}" value="${escapeAttr(judge)}" aria-label="審査員${index + 1}の名前">
+        </div>
+      `).join("");
+    }
+
+    function openScoreModal(groupId) {
+      activeGroupId = groupId;
+      const group = state.groups.find((item) => item.id === groupId);
+      const savedScores = getScores(groupId, state.selectedJudge) || [];
+      const savedMemo = getMemo(groupId, state.selectedJudge);
+      $("#modalTitle").textContent = group.name;
+      $("#modalMeta").textContent = `${divisions[group.division]} / ${state.selectedJudge}`;
+      $("#scoreForm").innerHTML = state.criteria[group.division].map((criterion, index) => `
+        <div class="criteria-row">
+          <div>
+            <strong>${escapeHtml(criterion)}</strong>
+            <span>1から10点で評価</span>
+          </div>
+          <input type="number" min="1" max="10" step="1" required data-score-index="${index}" value="${savedScores[index] || ""}" aria-label="${escapeAttr(criterion)}の点数">
+        </div>
+      `).join("") + `
+        <div class="field">
+          <label for="scoreMemo">メモ</label>
+          <textarea id="scoreMemo" placeholder="審査時の気づき、確認事項、コメントなどを入力できます。">${escapeHtml(savedMemo)}</textarea>
+        </div>
+        <div class="actions">
+          <button class="btn secondary" type="button" id="deleteScoreBtn">この審査を削除</button>
+          <button class="btn" type="submit">保存</button>
+        </div>
+      `;
+      $("#deleteScoreBtn").classList.toggle("hidden", !savedScores.length);
+      $("#deleteScoreBtn").addEventListener("click", () => deleteActiveScore().catch((error) => showToast(error.message)));
+      $("#scoreModal").classList.remove("hidden");
+      const firstInput = $("#scoreForm input");
+      if (firstInput) firstInput.focus();
+    }
+
+    function closeScoreModal() {
+      activeGroupId = null;
+      $("#scoreModal").classList.add("hidden");
+    }
+
+    async function saveActiveScore(event) {
+      event.preventDefault();
+      if (!activeGroupId) return;
+
+      const values = $$("[data-score-index]").map((input) => {
+        const value = Number(input.value);
+        if (!Number.isInteger(value) || value < 1 || value > 10) {
+          throw new Error("点数は1から10の整数で入力してください。");
+        }
+        return value;
+      });
+
+      state.scores[scoreKey(activeGroupId, state.selectedJudge)] = values;
+      state.memos[scoreKey(activeGroupId, state.selectedJudge)] = $("#scoreMemo").value.trim();
+      await saveState();
+      closeScoreModal();
+      render();
+      showToast("審査点とメモを保存しました。");
+    }
+
+    async function deleteActiveScore() {
+      if (!activeGroupId) return;
+      if (!confirm("この審査員の点数を削除しますか？")) return;
+      delete state.scores[scoreKey(activeGroupId, state.selectedJudge)];
+      delete state.memos[scoreKey(activeGroupId, state.selectedJudge)];
+      await saveState();
+      closeScoreModal();
+      render();
+      showToast("審査点を削除しました。");
+    }
+
+    async function saveGroupSettings() {
+      state.groups = state.groups.map((group) => {
+        const name = $(`[data-group-name="${group.id}"]`).value.trim() || group.name;
+        const division = $(`[data-group-division="${group.id}"]`).value;
+        return { ...group, name, division };
+      });
+      await saveState();
+      render();
+      showToast("団体設定を保存しました。");
+    }
+
+    async function saveCriteriaSettings() {
+      Object.keys(state.criteria).forEach((division) => {
+        state.criteria[division] = state.criteria[division].map((oldValue, index) => {
+          const value = $(`[data-criterion="${division}:${index}"]`).value.trim();
+          return value || oldValue;
+        });
+      });
+      await saveState();
+      render();
+      showToast("審査項目を保存しました。");
+    }
+
+    async function saveJudgeSettings() {
+      const oldJudges = [...state.judges];
+      const newJudges = oldJudges.map((oldJudge, index) => {
+        const value = $(`[data-judge-index="${index}"]`).value.trim();
+        return value || oldJudge;
+      });
+      if (new Set(newJudges).size !== newJudges.length) {
+        throw new Error("審査員名が重複しています。別々の名前にしてください。");
+      }
+
+      const renameKeys = (records) => {
+        const renamed = {};
+        Object.entries(records).forEach(([key, value]) => {
+          const [groupId, judge] = key.split("::");
+          const judgeIndex = oldJudges.indexOf(judge);
+          const nextJudge = judgeIndex >= 0 ? newJudges[judgeIndex] : judge;
+          renamed[scoreKey(groupId, nextJudge)] = value;
+        });
+        return renamed;
+      };
+
+      const selectedIndex = oldJudges.indexOf(state.selectedJudge);
+      state.judges = newJudges;
+      state.scores = renameKeys(state.scores);
+      state.memos = renameKeys(state.memos);
+      state.selectedJudge = selectedIndex >= 0 ? newJudges[selectedIndex] : newJudges[0];
+      localStorage.setItem(SELECTED_JUDGE_KEY, state.selectedJudge);
+      await saveState();
+      render();
+      showToast("審査員名を保存しました。");
+    }
+
+    function exportCsv() {
+      const header = [
+        "順位",
+        "団体名",
+        "部門",
+        "合計点",
+        "平均点",
+        "審査済数",
+        ...state.judges.map((judge) => `${judge} 合計点`),
+        ...state.judges.map((judge) => `${judge} メモ`)
+      ];
+      const rows = [...state.groups]
+        .map((group) => {
+          const total = getGroupTotal(group.id);
+          const reviewed = getReviewedCount(group.id);
+          const average = reviewed ? (total / reviewed).toFixed(1) : "0.0";
+          const judgeTotals = state.judges.map((judge) => {
+            const scores = getScores(group.id, judge);
+            return scores ? scores.reduce((a, b) => a + b, 0) : "";
+          });
+          const judgeMemos = state.judges.map((judge) => getMemo(group.id, judge));
+          return { group, total, average, reviewed, judgeTotals, judgeMemos };
+        })
+        .sort((a, b) => b.total - a.total || a.group.name.localeCompare(b.group.name, "ja"))
+        .map((row, index) => [
+          index + 1,
+          row.group.name,
+          divisions[row.group.division],
+          row.total,
+          row.average,
+          `${row.reviewed}/${state.judges.length}`,
+          ...row.judgeTotals,
+          ...row.judgeMemos
+        ]);
+
+      const csv = [header, ...rows].map((row) => row.map(csvCell).join(",")).join("\n");
+      const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "machizukuri-shinsa-ranking.csv";
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    async function resetAll() {
+      if (!confirm("団体設定・審査項目・点数をすべて初期化しますか？")) return;
+      state = defaultState();
+      await saveState();
+      render();
+      showToast("初期化しました。");
+    }
+
+    function csvCell(value) {
+      const text = String(value ?? "");
+      return `"${text.replaceAll('"', '""')}"`;
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function escapeAttr(value) {
+      return escapeHtml(value);
+    }
+
+    $$(".nav button").forEach((button) => {
+      button.addEventListener("click", () => {
+        currentView = button.dataset.view;
+        render();
+      });
+    });
+
+    $("#judgeSelect").addEventListener("change", (event) => {
+      state.selectedJudge = event.target.value;
+      localStorage.setItem(SELECTED_JUDGE_KEY, state.selectedJudge);
+      render();
+    });
+
+    $("#divisionFilter").addEventListener("change", renderGroupCards);
+    $("#rankingFilter").addEventListener("change", renderRanking);
+    $("#saveGroupsBtn").addEventListener("click", () => saveGroupSettings().catch((error) => showToast(error.message)));
+    $("#saveCriteriaBtn").addEventListener("click", () => saveCriteriaSettings().catch((error) => showToast(error.message)));
+    $("#saveJudgesBtn").addEventListener("click", () => saveJudgeSettings().catch((error) => showToast(error.message)));
+    $("#scoreForm").addEventListener("submit", (event) => saveActiveScore(event).catch((error) => showToast(error.message)));
+    $("#closeModalBtn").addEventListener("click", closeScoreModal);
+    $("#scoreModal").addEventListener("click", (event) => {
+      if (event.target.id === "scoreModal") closeScoreModal();
+    });
+    $("#exportBtn").addEventListener("click", exportCsv);
+    $("#resetBtn").addEventListener("click", () => resetAll().catch((error) => showToast(error.message)));
+
+    async function refreshSharedState() {
+      if (!USE_GOOGLE_SHEETS || !$("#scoreModal").classList.contains("hidden")) return;
+      const selectedJudge = state.selectedJudge;
+      state = await loadState();
+      state.selectedJudge = selectedJudge;
+      render();
+    }
+
+    async function init() {
+      if (!USE_GOOGLE_SHEETS) {
+        $("#storageNote").textContent = "Google Apps ScriptのURLが未設定です。設定するまでは、このブラウザ内にだけ保存されます。";
+      }
+      try {
+        state = await loadState();
+        render();
+        if (USE_GOOGLE_SHEETS) {
+          window.setInterval(() => {
+            refreshSharedState().catch(() => {});
+          }, 5000);
+        }
+      } catch (error) {
+        showToast(error.message);
+        render();
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
