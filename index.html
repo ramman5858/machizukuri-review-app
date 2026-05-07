@@ -1474,7 +1474,16 @@
       try {
         sessionStorage.setItem(ACCESS_CODE_KEY, code);
         state = await loadState(code);
-        showJudgeLock();
+        if (appRole === "admin") {
+          const selectedJudge = sessionStorage.getItem(SELECTED_JUDGE_SESSION_KEY) || localStorage.getItem(SELECTED_JUDGE_KEY);
+          state.selectedJudge = state.judges.includes(selectedJudge) ? selectedJudge : state.judges[0];
+          sessionStorage.setItem(SELECTED_JUDGE_SESSION_KEY, state.selectedJudge);
+          localStorage.setItem(SELECTED_JUDGE_KEY, state.selectedJudge);
+          showApp();
+          render();
+        } else {
+          showJudgeLock();
+        }
       } catch (error) {
         sessionStorage.removeItem(ACCESS_CODE_KEY);
         showAuthLock(error.message);
@@ -1530,7 +1539,13 @@
       }
 
       const selectedJudge = sessionStorage.getItem(SELECTED_JUDGE_SESSION_KEY);
-      if (selectedJudge && state.judges.includes(selectedJudge)) {
+      if (appRole === "admin") {
+        state.selectedJudge = state.judges.includes(selectedJudge) ? selectedJudge : state.judges[0];
+        sessionStorage.setItem(SELECTED_JUDGE_SESSION_KEY, state.selectedJudge);
+        localStorage.setItem(SELECTED_JUDGE_KEY, state.selectedJudge);
+        showApp();
+        render();
+      } else if (selectedJudge && state.judges.includes(selectedJudge)) {
         state.selectedJudge = selectedJudge;
         showApp();
         render();
