@@ -613,7 +613,7 @@
       <section class="panel hidden" id="groupsView">
         <div class="panel-head">
           <h3>団体設定</h3>
-          <button class="btn" id="saveGroupsBtn">保存</button>
+          <button class="btn" id="saveGroupsBtn" data-save-button="true">保存</button>
         </div>
         <div class="panel-body">
           <div class="grid" id="groupSettings"></div>
@@ -623,7 +623,7 @@
       <section class="panel hidden" id="criteriaView">
         <div class="panel-head">
           <h3>審査項目設定</h3>
-          <button class="btn" id="saveCriteriaBtn">保存</button>
+          <button class="btn" id="saveCriteriaBtn" data-save-button="true">保存</button>
         </div>
         <div class="panel-body">
           <div class="grid" id="criteriaSettings"></div>
@@ -633,7 +633,7 @@
       <section class="panel hidden" id="judgesView">
         <div class="panel-head">
           <h3>審査員設定</h3>
-          <button class="btn" id="saveJudgesBtn">保存</button>
+          <button class="btn" id="saveJudgesBtn" data-save-button="true">保存</button>
         </div>
         <div class="panel-body">
           <div class="grid" id="judgeSettings"></div>
@@ -696,6 +696,7 @@
     let activeGroupId = null;
     let appRole = "judge";
     let isAuthenticated = false;
+    let isSaving = false;
 
     const $ = (selector) => document.querySelector(selector);
     const $$ = (selector) => Array.from(document.querySelectorAll(selector));
@@ -825,6 +826,20 @@
       toast.textContent = message;
       toast.classList.add("show");
       window.setTimeout(() => toast.classList.remove("show"), 2200);
+    }
+
+    function setSaving(isActive, message = "保存中...") {
+      isSaving = isActive;
+      $$("[data-save-button]").forEach((button) => {
+        if (isActive) {
+          button.dataset.originalText = button.textContent;
+          button.textContent = message;
+          button.disabled = true;
+        } else {
+          button.textContent = button.dataset.originalText || button.textContent;
+          button.disabled = false;
+        }
+      });
     }
 
     function showAuthLock(message) {
@@ -1048,7 +1063,7 @@
         </div>
         <div class="actions">
           <button class="btn secondary" type="button" id="deleteScoreBtn">この審査を削除</button>
-          <button class="btn" type="submit">保存</button>
+          <button class="btn" type="submit" data-save-button="true">保存</button>
         </div>
       `;
       $("#deleteScoreBtn").classList.toggle("hidden", !savedScores.length);
@@ -1077,10 +1092,15 @@
 
       state.scores[scoreKey(activeGroupId, state.selectedJudge)] = values;
       state.memos[scoreKey(activeGroupId, state.selectedJudge)] = $("#scoreMemo").value.trim();
-      await saveState({ mode: "score", changedKey: scoreKey(activeGroupId, state.selectedJudge) });
-      closeScoreModal();
-      render();
-      showToast("審査点とメモを保存しました。");
+      setSaving(true);
+      try {
+        await saveState({ mode: "score", changedKey: scoreKey(activeGroupId, state.selectedJudge) });
+        closeScoreModal();
+        render();
+        showToast("審査点とメモを保存しました。");
+      } finally {
+        setSaving(false);
+      }
     }
 
     async function deleteActiveScore() {
@@ -1088,10 +1108,15 @@
       if (!confirm("この審査員の点数を削除しますか？")) return;
       delete state.scores[scoreKey(activeGroupId, state.selectedJudge)];
       delete state.memos[scoreKey(activeGroupId, state.selectedJudge)];
-      await saveState({ mode: "score", deletedKey: scoreKey(activeGroupId, state.selectedJudge) });
-      closeScoreModal();
-      render();
-      showToast("審査点を削除しました。");
+      setSaving(true, "削除中...");
+      try {
+        await saveState({ mode: "score", deletedKey: scoreKey(activeGroupId, state.selectedJudge) });
+        closeScoreModal();
+        render();
+        showToast("審査点を削除しました。");
+      } finally {
+        setSaving(false);
+      }
     }
 
     async function saveGroupSettings() {
@@ -1100,9 +1125,14 @@
         const division = $(`[data-group-division="${group.id}"]`).value;
         return { ...group, name, division };
       });
-      await saveState();
-      render();
-      showToast("団体設定を保存しました。");
+      setSaving(true);
+      try {
+        await saveState();
+        render();
+        showToast("団体設定を保存しました。");
+      } finally {
+        setSaving(false);
+      }
     }
 
     async function saveCriteriaSettings() {
@@ -1112,9 +1142,14 @@
           return value || oldValue;
         });
       });
-      await saveState();
-      render();
-      showToast("審査項目を保存しました。");
+      setSaving(true);
+      try {
+        await saveState();
+        render();
+        showToast("審査項目を保存しました。");
+      } finally {
+        setSaving(false);
+      }
     }
 
     async function saveJudgeSettings() {
@@ -1144,9 +1179,14 @@
       state.memos = renameKeys(state.memos);
       state.selectedJudge = selectedIndex >= 0 ? newJudges[selectedIndex] : newJudges[0];
       localStorage.setItem(SELECTED_JUDGE_KEY, state.selectedJudge);
-      await saveState();
-      render();
-      showToast("審査員名を保存しました。");
+      setSaving(true);
+      try {
+        await saveState();
+        render();
+        showToast("審査員名を保存しました。");
+      } finally {
+        setSaving(false);
+      }
     }
 
     function exportCsv() {
@@ -1197,9 +1237,14 @@
     async function resetAll() {
       if (!confirm("団体設定・審査項目・点数をすべて初期化しますか？")) return;
       state = defaultState();
-      await saveState();
-      render();
-      showToast("初期化しました。");
+      setSaving(true, "初期化中...");
+      try {
+        await saveState();
+        render();
+        showToast("初期化しました。");
+      } finally {
+        setSaving(false);
+      }
     }
 
     function csvCell(value) {
