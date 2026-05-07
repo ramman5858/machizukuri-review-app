@@ -958,14 +958,21 @@
       return state.memos[scoreKey(groupId, judge)] || "";
     }
 
+    function getWeightedScoreTotal(group, scores) {
+      if (!group || !scores) return 0;
+      const criteria = state.criteria[group.division] || [];
+      return scores.slice(0, criteria.length).reduce((sum, score, index) => {
+        const value = Number(score || 0);
+        const isPublicBenefit = criteria[index] === "公益性";
+        return sum + (isPublicBenefit && value >= 4 ? value * 2 : value);
+      }, 0);
+    }
+
     function getGroupTotal(groupId) {
       const group = state.groups.find((item) => item.id === groupId);
-      const limit = group ? state.criteria[group.division].length : 0;
       return Object.entries(state.scores)
         .filter(([key]) => key.startsWith(`${groupId}::`))
-        .reduce((sum, [, values]) => {
-          return sum + values.slice(0, limit).reduce((a, b) => a + Number(b || 0), 0);
-        }, 0);
+        .reduce((sum, [, values]) => sum + getWeightedScoreTotal(group, values), 0);
     }
 
     function getReviewedCount(groupId) {
@@ -1047,7 +1054,7 @@
       const groups = state.groups.filter((group) => filter === "all" || group.division === filter);
       $("#groupCards").innerHTML = groups.map((group) => {
         const scores = getScores(group.id, state.selectedJudge);
-        const judgeTotal = scores ? scores.reduce((a, b) => a + b, 0) : 0;
+        const judgeTotal = scores ? getWeightedScoreTotal(group, scores) : 0;
         const memoStatus = getMemo(group.id, state.selectedJudge).trim() ? "・メモあり" : "";
         const status = scores ? `入力済み ${judgeTotal}点${memoStatus}` : `未入力${memoStatus}`;
         const buttonText = scores ? "点数を修正" : "審査する";
@@ -1290,7 +1297,7 @@
         "合計点",
         "平均点",
         "審査済数",
-        ...state.judges.map((judge) => `${judge} 合計点`),
+        ...state.judges.map((judge) => `${judge} 合計点（加重後）`),
         ...state.judges.map((judge) => `${judge} メモ`)
       ];
       const rows = [...state.groups]
@@ -1300,7 +1307,7 @@
           const average = reviewed ? (total / reviewed).toFixed(1) : "0.0";
           const judgeTotals = state.judges.map((judge) => {
             const scores = getScores(group.id, judge);
-            return scores ? scores.reduce((a, b) => a + b, 0) : "";
+            return scores ? getWeightedScoreTotal(group, scores) : "";
           });
           const judgeMemos = state.judges.map((judge) => getMemo(group.id, judge));
           return { group, total, average, reviewed, judgeTotals, judgeMemos };
