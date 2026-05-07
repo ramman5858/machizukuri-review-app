@@ -512,24 +512,6 @@
       transform: translateY(0);
     }
 
-    .switching-overlay {
-      position: fixed;
-      inset: 0;
-      display: grid;
-      place-items: center;
-      background: rgba(246, 247, 249, .72);
-      backdrop-filter: blur(2px);
-      z-index: 30;
-    }
-
-    .switching-message {
-      background: #17202d;
-      color: #fff;
-      border-radius: 8px;
-      padding: 13px 16px;
-      box-shadow: var(--shadow);
-      font-weight: 700;
-    }
 
     .auth-lock {
       min-height: 100vh;
@@ -559,6 +541,47 @@
       margin: 0;
       color: var(--muted);
       line-height: 1.6;
+    }
+
+    .judge-lock {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: var(--bg);
+    }
+
+    .judge-card {
+      width: min(460px, 100%);
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      padding: 22px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .judge-card h1 {
+      margin: 0;
+      font-size: 22px;
+    }
+
+    .judge-card p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .judge-display {
+      min-height: 42px;
+      display: flex;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcfd;
+      padding: 10px 11px;
+      font-weight: 700;
     }
 
     @media (max-width: 860px) {
@@ -624,6 +647,19 @@
     </div>
   </div>
 
+  <div class="judge-lock hidden" id="judgeLock">
+    <div class="judge-card">
+      <h1>審査員選択</h1>
+      <p>この端末で入力する審査員を選んでください。</p>
+      <div class="field">
+        <label for="entryJudgeSelect">審査員</label>
+        <select id="entryJudgeSelect"></select>
+      </div>
+      <button class="btn" id="enterAppBtn">この審査員で始める</button>
+      <button class="btn secondary" id="entryLogoutBtn">パスコードからやり直す</button>
+    </div>
+  </div>
+
   <div class="app-shell hidden" id="appShell">
     <aside class="sidebar">
       <div class="brand">
@@ -632,8 +668,8 @@
       </div>
 
       <div class="field">
-        <label for="judgeSelect">審査員</label>
-        <select id="judgeSelect"></select>
+        <label>審査員</label>
+        <div class="judge-display" id="judgeDisplay">未選択</div>
       </div>
 
       <nav class="nav" id="mainNav" aria-label="画面切り替え">
@@ -754,10 +790,6 @@
   </div>
 
   <div class="toast" id="toast"></div>
-  <div class="switching-overlay hidden" id="switchingOverlay">
-    <div class="switching-message">審査員変更中...</div>
-  </div>
-
   <script>
     const STORAGE_KEY = "machizukuri-review-app-v1";
     const SELECTED_JUDGE_KEY = "machizukuri-review-selected-judge";
@@ -929,14 +961,6 @@
       window.setTimeout(() => toast.classList.remove("show"), 2200);
     }
 
-    function showSwitchingOverlay() {
-      $("#switchingOverlay").classList.remove("hidden");
-    }
-
-    function hideSwitchingOverlay() {
-      $("#switchingOverlay").classList.add("hidden");
-    }
-
     function setSaving(isActive, message = "保存中...") {
       isSaving = isActive;
       $$("[data-save-button]").forEach((button) => {
@@ -954,6 +978,7 @@
     function showAuthLock(message) {
       isAuthenticated = false;
       $("#appShell").classList.add("hidden");
+      $("#judgeLock").classList.add("hidden");
       $("#authMessage").textContent = message;
       $("#authLock").classList.remove("hidden");
     }
@@ -961,7 +986,22 @@
     function showApp() {
       isAuthenticated = true;
       $("#authLock").classList.add("hidden");
+      $("#judgeLock").classList.add("hidden");
       $("#appShell").classList.remove("hidden");
+    }
+
+    function showJudgeLock() {
+      isAuthenticated = false;
+      $("#appShell").classList.add("hidden");
+      $("#authLock").classList.add("hidden");
+      $("#entryJudgeSelect").innerHTML = state.judges
+        .map((judge) => `<option value="${escapeHtml(judge)}">${escapeHtml(judge)}</option>`)
+        .join("");
+      const savedJudge = sessionStorage.getItem(SELECTED_JUDGE_SESSION_KEY) || localStorage.getItem(SELECTED_JUDGE_KEY);
+      if (savedJudge && state.judges.includes(savedJudge)) {
+        $("#entryJudgeSelect").value = savedJudge;
+      }
+      $("#judgeLock").classList.remove("hidden");
     }
 
     function logout() {
@@ -970,6 +1010,7 @@
       currentView = "review";
       isAuthenticated = false;
       $("#appShell").classList.add("hidden");
+      $("#judgeLock").classList.add("hidden");
       init();
     }
 
@@ -1029,10 +1070,7 @@
       if (state.judges.includes(selectedJudge)) {
         state.selectedJudge = selectedJudge;
       }
-      $("#judgeSelect").innerHTML = state.judges
-        .map((judge) => `<option value="${escapeHtml(judge)}">${escapeHtml(judge)}</option>`)
-        .join("");
-      $("#judgeSelect").value = state.selectedJudge;
+      $("#judgeDisplay").textContent = state.selectedJudge;
     }
 
     function renderStats() {
@@ -1402,16 +1440,6 @@
       });
     });
 
-    $("#judgeSelect").addEventListener("change", async (event) => {
-      showSwitchingOverlay();
-      state.selectedJudge = event.target.value;
-      localStorage.setItem(SELECTED_JUDGE_KEY, state.selectedJudge);
-      sessionStorage.setItem(SELECTED_JUDGE_SESSION_KEY, state.selectedJudge);
-      await new Promise((resolve) => window.setTimeout(resolve, 180));
-      render();
-      hideSwitchingOverlay();
-    });
-
     $("#divisionFilter").addEventListener("change", renderGroupCards);
     $("#rankingFilter").addEventListener("change", renderRanking);
     $("#saveGroupsBtn").addEventListener("click", () => saveGroupSettings().catch((error) => showToast(error.message)));
@@ -1429,6 +1457,19 @@
       init();
     });
     $("#logoutBtn").addEventListener("click", logout);
+    $("#entryLogoutBtn").addEventListener("click", logout);
+    $("#enterAppBtn").addEventListener("click", () => {
+      const selectedJudge = $("#entryJudgeSelect").value;
+      if (!selectedJudge) {
+        showToast("審査員を選んでください。");
+        return;
+      }
+      state.selectedJudge = selectedJudge;
+      localStorage.setItem(SELECTED_JUDGE_KEY, selectedJudge);
+      sessionStorage.setItem(SELECTED_JUDGE_SESSION_KEY, selectedJudge);
+      showApp();
+      render();
+    });
 
     async function refreshSharedState() {
       if (!USE_GOOGLE_SHEETS || !$("#scoreModal").classList.contains("hidden")) return;
@@ -1449,8 +1490,14 @@
       }
       try {
         state = await loadState();
-        showApp();
-        render();
+        const selectedJudge = sessionStorage.getItem(SELECTED_JUDGE_SESSION_KEY);
+        if (selectedJudge && state.judges.includes(selectedJudge)) {
+          state.selectedJudge = selectedJudge;
+          showApp();
+          render();
+        } else {
+          showJudgeLock();
+        }
         if (USE_GOOGLE_SHEETS) {
           window.setInterval(() => {
             refreshSharedState().catch(() => {});
