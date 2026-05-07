@@ -503,12 +503,12 @@
         <select id="judgeSelect"></select>
       </div>
 
-      <nav class="nav" aria-label="画面切り替え">
+      <nav class="nav" id="mainNav" aria-label="画面切り替え">
         <button class="active" data-view="review">審査入力</button>
-        <button data-view="ranking">集計ランキング</button>
-        <button data-view="groups">団体設定</button>
-        <button data-view="criteria">審査項目設定</button>
-        <button data-view="judges">審査員設定</button>
+        <button data-view="ranking" data-admin-only="true">集計ランキング</button>
+        <button data-view="groups" data-admin-only="true">団体設定</button>
+        <button data-view="criteria" data-admin-only="true">審査項目設定</button>
+        <button data-view="judges" data-admin-only="true">審査員設定</button>
       </nav>
 
       <div class="side-note" id="storageNote">
@@ -522,7 +522,7 @@
           <h2 id="pageTitle">審査入力</h2>
           <p id="pageLead">団体を選び、審査員ごとに点数を入力します。</p>
         </div>
-        <div class="actions">
+        <div class="actions" data-admin-only="true">
           <button class="btn secondary" id="exportBtn">CSV出力</button>
           <button class="btn danger" id="resetBtn">全データ初期化</button>
         </div>
@@ -656,6 +656,7 @@
     let state = defaultState();
     let currentView = "review";
     let activeGroupId = null;
+    let appRole = "judge";
 
     const $ = (selector) => document.querySelector(selector);
     const $$ = (selector) => Array.from(document.querySelectorAll(selector));
@@ -683,7 +684,8 @@
           sessionStorage.removeItem(ACCESS_CODE_KEY);
           throw new Error(data.error);
         }
-        return normalizeState(data);
+        appRole = data.role || "judge";
+        return normalizeState(data.state || data);
       }
 
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -695,7 +697,7 @@
       }
     }
 
-    function saveState() {
+    function saveState(options = {}) {
       localStorage.setItem(SELECTED_JUDGE_KEY, state.selectedJudge);
       const sharedState = {
         judges: state.judges,
@@ -705,7 +707,12 @@
         memos: state.memos
       };
       if (USE_GOOGLE_SHEETS) {
-        return postToAppsScript(sharedState);
+        return postToAppsScript({
+          mode: options.mode || "admin",
+          changedKey: options.changedKey || "",
+          deletedKey: options.deletedKey || "",
+          state: sharedState
+        });
       }
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
       return Promise.resolve();
@@ -751,7 +758,7 @@
       });
     }
 
-    function postToAppsScript(sharedState) {
+    function postToAppsScript(payload) {
       return new Promise((resolve, reject) => {
         const iframeName = `machizukuriPostFrame${Date.now()}`;
         const iframe = document.createElement("iframe");
@@ -767,7 +774,7 @@
         const payloadInput = document.createElement("input");
         payloadInput.type = "hidden";
         payloadInput.name = "payload";
-        payloadInput.value = JSON.stringify(sharedState);
+        payloadInput.value = JSON.stringify(payload);
         form.appendChild(payloadInput);
 
         const passcodeInput = document.createElement("input");
@@ -878,6 +885,14 @@
         judges: ["審査員設定", "審査員名を変更できます。"]
       };
 
+      const isAdmin = appRole === "admin";
+      if (!isAdmin && currentView !== "review") currentView = "review";
+
+      $$("[data-admin-only]").forEach((element) => {
+        element.classList.toggle("hidden", !isAdmin);
+      });
+      $("#mainNav").classList.toggle("hidden", !isAdmin);
+
       $$(".nav button").forEach((button) => {
         button.classList.toggle("active", button.dataset.view === currentView);
       });
@@ -886,6 +901,9 @@
       });
       $("#pageTitle").textContent = titles[currentView][0];
       $("#pageLead").textContent = titles[currentView][1];
+      $("#storageNote").textContent = isAdmin
+        ? "事務局モードです。入力・集計・各種設定を操作できます。"
+        : "審査員モードです。点数とメモを入力できます。";
     }
 
     function renderGroupCards() {
@@ -1030,7 +1048,7 @@
 
       state.scores[scoreKey(activeGroupId, state.selectedJudge)] = values;
       state.memos[scoreKey(activeGroupId, state.selectedJudge)] = $("#scoreMemo").value.trim();
-      await saveState();
+      await saveState({ mode: "score", changedKey: scoreKey(activeGroupId, state.selectedJudge) });
       closeScoreModal();
       render();
       showToast("審査点とメモを保存しました。");
@@ -1041,7 +1059,7 @@
       if (!confirm("この審査員の点数を削除しますか？")) return;
       delete state.scores[scoreKey(activeGroupId, state.selectedJudge)];
       delete state.memos[scoreKey(activeGroupId, state.selectedJudge)];
-      await saveState();
+      await saveState({ mode: "score", deletedKey: scoreKey(activeGroupId, state.selectedJudge) });
       closeScoreModal();
       render();
       showToast("審査点を削除しました。");
