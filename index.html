@@ -350,6 +350,35 @@
       font-size: 13px;
     }
 
+    .score-form .criteria-row {
+      grid-template-columns: minmax(0, 1fr) 92px;
+      gap: 10px;
+      padding: 8px 10px;
+    }
+
+    .score-form .criteria-row strong,
+    .score-form .criteria-row span {
+      display: inline;
+      margin: 0;
+    }
+
+    .score-form .criteria-row span::before {
+      content: "（";
+    }
+
+    .score-form .criteria-row span::after {
+      content: "）";
+    }
+
+    .score-form input[type="number"] {
+      min-height: 36px;
+      padding: 7px 8px;
+    }
+
+    .score-form textarea {
+      min-height: 76px;
+    }
+
     table {
       width: 100%;
       border-collapse: collapse;
@@ -500,6 +529,10 @@
 
       .criteria-row {
         grid-template-columns: 1fr;
+      }
+
+      .score-form .criteria-row {
+        grid-template-columns: minmax(0, 1fr) 86px;
       }
     }
 
