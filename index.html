@@ -1005,16 +1005,13 @@
       $("#entryJudgeSelect").innerHTML = state.judges
         .map((judge) => `<option value="${escapeHtml(judge)}">${escapeHtml(judge)}</option>`)
         .join("");
-      const savedJudge = sessionStorage.getItem(SELECTED_JUDGE_SESSION_KEY) || localStorage.getItem(SELECTED_JUDGE_KEY);
-      if (savedJudge && state.judges.includes(savedJudge)) {
-        $("#entryJudgeSelect").value = savedJudge;
-      }
       $("#judgeLock").classList.remove("hidden");
     }
 
     function logout() {
       sessionStorage.removeItem(ACCESS_CODE_KEY);
       sessionStorage.removeItem(SELECTED_JUDGE_SESSION_KEY);
+      localStorage.removeItem(SELECTED_JUDGE_KEY);
       appRole = "judge";
       currentView = "review";
       isAuthenticated = false;
