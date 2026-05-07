@@ -584,6 +584,10 @@
       font-weight: 700;
     }
 
+    .admin-judge-select {
+      margin-top: 8px;
+    }
+
     @media (max-width: 860px) {
       .app-shell {
         grid-template-columns: 1fr;
@@ -677,6 +681,7 @@
       <div class="field">
         <label>審査員</label>
         <div class="judge-display" id="judgeDisplay">未選択</div>
+        <select class="admin-judge-select hidden" id="adminJudgeSelect" data-admin-only="true" aria-label="事務局用 審査員切り替え"></select>
       </div>
 
       <nav class="nav" id="mainNav" aria-label="画面切り替え">
@@ -1078,6 +1083,10 @@
         state.selectedJudge = selectedJudge;
       }
       $("#judgeDisplay").textContent = state.selectedJudge;
+      $("#adminJudgeSelect").innerHTML = state.judges
+        .map((judge) => `<option value="${escapeHtml(judge)}">${escapeHtml(judge)}</option>`)
+        .join("");
+      $("#adminJudgeSelect").value = state.selectedJudge;
     }
 
     function renderStats() {
@@ -1491,6 +1500,12 @@
     });
     $("#logoutBtn").addEventListener("click", logout);
     $("#entryLogoutBtn").addEventListener("click", logout);
+    $("#adminJudgeSelect").addEventListener("change", (event) => {
+      state.selectedJudge = event.target.value;
+      localStorage.setItem(SELECTED_JUDGE_KEY, state.selectedJudge);
+      sessionStorage.setItem(SELECTED_JUDGE_SESSION_KEY, state.selectedJudge);
+      render();
+    });
     $("#enterAppBtn").addEventListener("click", () => {
       const selectedJudge = $("#entryJudgeSelect").value;
       if (!selectedJudge) {
