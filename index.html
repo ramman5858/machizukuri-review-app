@@ -687,6 +687,7 @@
       <nav class="nav" id="mainNav" aria-label="画面切り替え">
         <button class="active" data-view="review">審査入力</button>
         <button data-view="ranking" data-admin-only="true">集計ランキング</button>
+        <button data-view="details" data-admin-only="true">審査明細</button>
         <button data-view="groups" data-admin-only="true">団体設定</button>
         <button data-view="criteria" data-admin-only="true">審査項目設定</button>
         <button data-view="judges" data-admin-only="true">審査員設定</button>
@@ -750,6 +751,38 @@
               </tr>
             </thead>
             <tbody id="rankingBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel hidden" id="detailsView">
+        <div class="panel-head">
+          <h3>審査員別 評価点数</h3>
+          <select id="detailsFilter" aria-label="明細部門">
+            <option value="all">すべての部門</option>
+            <option value="start">スタート部門</option>
+            <option value="general">一般部門</option>
+            <option value="collab">団体連携部門</option>
+          </select>
+        </div>
+        <div class="panel-body">
+          <table>
+            <thead>
+              <tr>
+                <th>団体名</th>
+                <th>部門</th>
+                <th>審査員</th>
+                <th class="number">公益性</th>
+                <th class="number">2</th>
+                <th class="number">3</th>
+                <th class="number">4</th>
+                <th class="number">5</th>
+                <th class="number">6</th>
+                <th class="number">合計点</th>
+                <th>メモ</th>
+              </tr>
+            </thead>
+            <tbody id="detailsBody"></tbody>
           </table>
         </div>
       </section>
@@ -1072,6 +1105,7 @@
       renderViews();
       renderGroupCards();
       renderRanking();
+      renderDetails();
       renderGroupSettings();
       renderCriteriaSettings();
       renderJudgeSettings();
@@ -1107,6 +1141,7 @@
       const titles = {
         review: ["審査入力", "団体を選び、審査員ごとに点数を入力します。"],
         ranking: ["集計ランキング", "団体ごとの合計点を点数順に表示します。"],
+        details: ["審査明細", "審査員ごとの項目別点数とメモを確認します。"],
         groups: ["団体設定", "団体名と応募部門を変更できます。"],
         criteria: ["審査項目設定", "部門ごとの審査項目名を変更できます。"],
         judges: ["審査員設定", "審査員名を変更できます。"]
@@ -1123,7 +1158,7 @@
       $$(".nav button").forEach((button) => {
         button.classList.toggle("active", button.dataset.view === currentView);
       });
-      ["review", "ranking", "groups", "criteria", "judges"].forEach((view) => {
+      ["review", "ranking", "details", "groups", "criteria", "judges"].forEach((view) => {
         $(`#${view}View`).classList.toggle("hidden", view !== currentView);
       });
       $("#pageTitle").textContent = titles[currentView][0];
@@ -1181,6 +1216,38 @@
           <td class="number">${row.reviewed}/${state.judges.length}</td>
         </tr>
       `).join("") || `<tr><td colspan="6" class="empty">表示できる団体がありません。</td></tr>`;
+    }
+
+    function renderDetails() {
+      const filter = $("#detailsFilter").value;
+      const rows = state.groups
+        .filter((group) => filter === "all" || group.division === filter)
+        .flatMap((group) => {
+          const criteria = state.criteria[group.division] || [];
+          return state.judges.map((judge) => {
+            const scores = getScores(group.id, judge);
+            const total = scores ? getWeightedScoreTotal(group, scores) : "";
+            const memo = getMemo(group.id, judge);
+            return { group, judge, criteria, scores, total, memo };
+          });
+        });
+
+      $("#detailsBody").innerHTML = rows.map((row) => `
+        <tr>
+          <td><strong>${escapeHtml(row.group.name)}</strong></td>
+          <td>${divisions[row.group.division]}</td>
+          <td>${escapeHtml(row.judge)}</td>
+          ${Array.from({ length: 6 }, (_, index) => {
+            const criterion = row.criteria[index] || "";
+            const rawScore = row.scores ? row.scores[index] : "";
+            const display = rawScore === undefined || rawScore === "" ? "" : rawScore;
+            const weighted = criterion === "公益性" && Number(rawScore) >= 4 ? `${display}→${Number(rawScore) * 2}` : display;
+            return `<td class="number" title="${escapeAttr(criterion)}">${weighted}</td>`;
+          }).join("")}
+          <td class="number"><strong>${row.total}</strong></td>
+          <td>${escapeHtml(row.memo)}</td>
+        </tr>
+      `).join("") || `<tr><td colspan="11" class="empty">表示できる審査明細がありません。</td></tr>`;
     }
 
     function renderGroupSettings() {
@@ -1458,6 +1525,7 @@
 
     $("#divisionFilter").addEventListener("change", renderGroupCards);
     $("#rankingFilter").addEventListener("change", renderRanking);
+    $("#detailsFilter").addEventListener("change", renderDetails);
     $("#saveGroupsBtn").addEventListener("click", () => saveGroupSettings().catch((error) => showToast(error.message)));
     $("#saveCriteriaBtn").addEventListener("click", () => saveCriteriaSettings().catch((error) => showToast(error.message)));
     $("#saveJudgesBtn").addEventListener("click", () => saveJudgeSettings().catch((error) => showToast(error.message)));
