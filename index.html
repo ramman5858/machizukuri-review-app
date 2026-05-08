@@ -707,6 +707,7 @@
         </div>
         <div class="actions" data-admin-only="true">
           <button class="btn secondary" id="exportBtn">CSV出力</button>
+          <button class="btn secondary" id="resetScoresBtn">審査点数のみ初期化</button>
           <button class="btn danger" id="resetBtn">全データ初期化</button>
         </div>
       </section>
@@ -1498,6 +1499,20 @@
       }
     }
 
+    async function resetScoresOnly() {
+      if (!confirm("審査点数とメモだけを初期化しますか？団体設定・審査項目・審査員名は残ります。")) return;
+      state.scores = {};
+      state.memos = {};
+      setSaving(true, "初期化中...");
+      try {
+        await saveState();
+        render();
+        showToast("審査点数とメモを初期化しました。");
+      } finally {
+        setSaving(false);
+      }
+    }
+
     function csvCell(value) {
       const text = String(value ?? "");
       return `"${text.replaceAll('"', '""')}"`;
@@ -1535,6 +1550,7 @@
       if (event.target.id === "scoreModal") closeScoreModal();
     });
     $("#exportBtn").addEventListener("click", exportCsv);
+    $("#resetScoresBtn").addEventListener("click", () => resetScoresOnly().catch((error) => showToast(error.message)));
     $("#resetBtn").addEventListener("click", () => resetAll().catch((error) => showToast(error.message)));
     $("#loginForm").addEventListener("submit", async (event) => {
       event.preventDefault();
