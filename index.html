@@ -1219,24 +1219,22 @@
         <th>順位</th>
         <th>団体名</th>
         <th>部門</th>
-        <th class="number">獲得得点の割合</th>
-        <th class="number">平均点</th>
         ${state.judges.map((judge) => `<th class="number">${escapeHtml(judge)}</th>`).join("")}
         <th class="number">合計点</th>
-        <th class="number">審査済</th>
+        <th class="number">平均点</th>
+        <th class="number">獲得得点の割合</th>
       `;
       $("#rankingBody").innerHTML = rows.map((row, index) => `
         <tr>
           <td><span class="rank">${index + 1}</span></td>
           <td><strong>${escapeHtml(row.group.name)}</strong></td>
           <td>${divisions[row.group.division]}</td>
-          <td class="number">${formatPercent(row.scoreRate)}</td>
-          <td class="number">${row.average}</td>
           ${row.judgeTotals.map((total) => `<td class="number">${total}</td>`).join("")}
           <td class="number">${row.total}</td>
-          <td class="number">${row.reviewed}/${state.judges.length}</td>
+          <td class="number">${row.average}</td>
+          <td class="number">${formatPercent(row.scoreRate)}</td>
         </tr>
-      `).join("") || `<tr><td colspan="${7 + state.judges.length}" class="empty">表示できる団体がありません。</td></tr>`;
+      `).join("") || `<tr><td colspan="${6 + state.judges.length}" class="empty">表示できる団体がありません。</td></tr>`;
     }
 
     function renderDetails() {
@@ -1466,11 +1464,10 @@
         "順位",
         "団体名",
         "部門",
-        "獲得得点の割合",
-        "平均点",
         ...state.judges.map((judge) => `${judge} 合計点（加重後）`),
         "合計点",
-        "審査済数",
+        "平均点",
+        "獲得得点の割合",
         ...state.judges.map((judge) => `${judge} メモ`)
       ];
       const rows = [...state.groups]
@@ -1491,11 +1488,10 @@
           index + 1,
           row.group.name,
           divisions[row.group.division],
-          formatPercent(row.scoreRate),
-          row.average,
           ...row.judgeTotals,
           row.total,
-          `${row.reviewed}/${state.judges.length}`,
+          row.average,
+          formatPercent(row.scoreRate),
           ...row.judgeMemos
         ]);
 
@@ -1525,7 +1521,7 @@
 
         if (divisionIndex > 0) rows.push([]);
         rows.push([label]);
-        rows.push(["順位", "団体名", "獲得得点の割合", "平均点", ...state.judges.map((judge) => `${judge} 点数`), "合計点", "審査済数"]);
+        rows.push(["順位", "団体名", ...state.judges.map((judge) => `${judge} 点数`), "合計点", "平均点", "獲得得点の割合"]);
         rankedRows.forEach((row, index) => {
           const judgeTotals = state.judges.map((judge) => {
             const scores = getScores(row.group.id, judge);
@@ -1534,11 +1530,10 @@
           rows.push([
             index + 1,
             row.group.name,
-            formatPercent(row.scoreRate),
-            row.average,
             ...judgeTotals,
             row.total,
-            `${row.reviewed}/${state.judges.length}`
+            row.average,
+            formatPercent(row.scoreRate)
           ]);
         });
       });
