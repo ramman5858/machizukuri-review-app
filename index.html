@@ -707,6 +707,7 @@
         </div>
         <div class="actions" data-admin-only="true">
           <button class="btn secondary" id="exportBtn">CSV出力</button>
+          <button class="btn secondary" id="exportDivisionRankingBtn">部門別順位表CSV</button>
           <button class="btn secondary" id="resetScoresBtn">審査点数のみ初期化</button>
           <button class="btn danger" id="resetBtn">全データ初期化</button>
         </div>
@@ -742,14 +743,7 @@
         <div class="panel-body">
           <table>
             <thead>
-              <tr>
-                <th>順位</th>
-                <th>団体名</th>
-                <th>部門</th>
-                <th class="number">平均点</th>
-                <th class="number">合計点</th>
-                <th class="number">審査済</th>
-              </tr>
+              <tr id="rankingHeaderRow"></tr>
             </thead>
             <tbody id="rankingBody"></tbody>
           </table>
@@ -1097,7 +1091,16 @@
     }
 
     function getMaxScore(group) {
-      return state.criteria[group.division].length * 10 * state.judges.length;
+      return group.division === "start" ? 300 : 350;
+    }
+
+    function getScoreRate(group, total) {
+      const maxScore = getMaxScore(group);
+      return maxScore ? total / maxScore : 0;
+    }
+
+    function formatPercent(value) {
+      return `${(value * 100).toFixed(1)}%`;
     }
 
     function render() {
@@ -1203,20 +1206,37 @@
           const total = getGroupTotal(group.id);
           const reviewed = getReviewedCount(group.id);
           const average = reviewed ? (total / reviewed).toFixed(1) : "0.0";
-          return { group, total, reviewed, average };
+          const scoreRate = getScoreRate(group, total);
+          const judgeTotals = state.judges.map((judge) => {
+            const scores = getScores(group.id, judge);
+            return scores ? getWeightedScoreTotal(group, scores) : "";
+          });
+          return { group, total, reviewed, average, scoreRate, judgeTotals };
         })
-        .sort((a, b) => Number(b.average) - Number(a.average) || b.total - a.total || a.group.name.localeCompare(b.group.name, "ja"));
+        .sort((a, b) => b.total - a.total || b.scoreRate - a.scoreRate || Number(b.average) - Number(a.average) || a.group.name.localeCompare(b.group.name, "ja"));
 
+      $("#rankingHeaderRow").innerHTML = `
+        <th>順位</th>
+        <th>団体名</th>
+        <th>部門</th>
+        <th class="number">獲得得点の割合</th>
+        <th class="number">平均点</th>
+        ${state.judges.map((judge) => `<th class="number">${escapeHtml(judge)}</th>`).join("")}
+        <th class="number">合計点</th>
+        <th class="number">審査済</th>
+      `;
       $("#rankingBody").innerHTML = rows.map((row, index) => `
         <tr>
           <td><span class="rank">${index + 1}</span></td>
           <td><strong>${escapeHtml(row.group.name)}</strong></td>
           <td>${divisions[row.group.division]}</td>
+          <td class="number">${formatPercent(row.scoreRate)}</td>
           <td class="number">${row.average}</td>
+          ${row.judgeTotals.map((total) => `<td class="number">${total}</td>`).join("")}
           <td class="number">${row.total}</td>
           <td class="number">${row.reviewed}/${state.judges.length}</td>
         </tr>
-      `).join("") || `<tr><td colspan="6" class="empty">表示できる団体がありません。</td></tr>`;
+      `).join("") || `<tr><td colspan="${7 + state.judges.length}" class="empty">表示できる団体がありません。</td></tr>`;
     }
 
     function renderDetails() {
@@ -1446,10 +1466,11 @@
         "順位",
         "団体名",
         "部門",
+        "獲得得点の割合",
         "平均点",
+        ...state.judges.map((judge) => `${judge} 合計点（加重後）`),
         "合計点",
         "審査済数",
-        ...state.judges.map((judge) => `${judge} 合計点（加重後）`),
         ...state.judges.map((judge) => `${judge} メモ`)
       ];
       const rows = [...state.groups]
@@ -1457,22 +1478,24 @@
           const total = getGroupTotal(group.id);
           const reviewed = getReviewedCount(group.id);
           const average = reviewed ? (total / reviewed).toFixed(1) : "0.0";
+          const scoreRate = getScoreRate(group, total);
           const judgeTotals = state.judges.map((judge) => {
             const scores = getScores(group.id, judge);
             return scores ? getWeightedScoreTotal(group, scores) : "";
           });
           const judgeMemos = state.judges.map((judge) => getMemo(group.id, judge));
-          return { group, total, average, reviewed, judgeTotals, judgeMemos };
+          return { group, total, average, reviewed, scoreRate, judgeTotals, judgeMemos };
         })
-        .sort((a, b) => Number(b.average) - Number(a.average) || b.total - a.total || a.group.name.localeCompare(b.group.name, "ja"))
+        .sort((a, b) => b.total - a.total || b.scoreRate - a.scoreRate || Number(b.average) - Number(a.average) || a.group.name.localeCompare(b.group.name, "ja"))
         .map((row, index) => [
           index + 1,
           row.group.name,
           divisions[row.group.division],
+          formatPercent(row.scoreRate),
           row.average,
+          ...row.judgeTotals,
           row.total,
           `${row.reviewed}/${state.judges.length}`,
-          ...row.judgeTotals,
           ...row.judgeMemos
         ]);
 
@@ -1482,6 +1505,50 @@
       const link = document.createElement("a");
       link.href = url;
       link.download = "machizukuri-shinsa-ranking.csv";
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function exportDivisionRankingCsv() {
+      const rows = [];
+      Object.entries(divisions).forEach(([division, label], divisionIndex) => {
+        const rankedRows = state.groups
+          .filter((group) => group.division === division)
+          .map((group) => {
+            const total = getGroupTotal(group.id);
+            const reviewed = getReviewedCount(group.id);
+            const average = reviewed ? (total / reviewed).toFixed(1) : "0.0";
+            const scoreRate = getScoreRate(group, total);
+            return { group, total, reviewed, average, scoreRate };
+          })
+          .sort((a, b) => b.total - a.total || b.scoreRate - a.scoreRate || Number(b.average) - Number(a.average) || a.group.name.localeCompare(b.group.name, "ja"));
+
+        if (divisionIndex > 0) rows.push([]);
+        rows.push([label]);
+        rows.push(["順位", "団体名", "獲得得点の割合", "平均点", ...state.judges.map((judge) => `${judge} 点数`), "合計点", "審査済数"]);
+        rankedRows.forEach((row, index) => {
+          const judgeTotals = state.judges.map((judge) => {
+            const scores = getScores(row.group.id, judge);
+            return scores ? getWeightedScoreTotal(row.group, scores) : "";
+          });
+          rows.push([
+            index + 1,
+            row.group.name,
+            formatPercent(row.scoreRate),
+            row.average,
+            ...judgeTotals,
+            row.total,
+            `${row.reviewed}/${state.judges.length}`
+          ]);
+        });
+      });
+
+      const csv = rows.map((row) => row.map(csvCell).join(",")).join("\n");
+      const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "machizukuri-shinsa-division-ranking.csv";
       link.click();
       URL.revokeObjectURL(url);
     }
@@ -1550,6 +1617,7 @@
       if (event.target.id === "scoreModal") closeScoreModal();
     });
     $("#exportBtn").addEventListener("click", exportCsv);
+    $("#exportDivisionRankingBtn").addEventListener("click", exportDivisionRankingCsv);
     $("#resetScoresBtn").addEventListener("click", () => resetScoresOnly().catch((error) => showToast(error.message)));
     $("#resetBtn").addEventListener("click", () => resetAll().catch((error) => showToast(error.message)));
     $("#loginForm").addEventListener("submit", async (event) => {
