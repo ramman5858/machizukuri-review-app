@@ -346,6 +346,10 @@
       border-radius: 8px;
     }
 
+    .group-setting-row {
+      grid-template-columns: minmax(0, 1fr) 150px auto;
+    }
+
     .criteria-row strong {
       display: block;
       margin-bottom: 4px;
@@ -620,6 +624,10 @@
         grid-template-columns: 1fr;
       }
 
+      .group-setting-row {
+        grid-template-columns: 1fr;
+      }
+
       .score-form .criteria-row {
         grid-template-columns: minmax(0, 1fr) 86px;
       }
@@ -785,7 +793,10 @@
       <section class="panel hidden" id="groupsView">
         <div class="panel-head">
           <h3>団体設定</h3>
-          <button class="btn" id="saveGroupsBtn" data-save-button="true">保存</button>
+          <div class="actions">
+            <button class="btn secondary" id="addGroupBtn" type="button">団体を追加</button>
+            <button class="btn" id="saveGroupsBtn" data-save-button="true">保存</button>
+          </div>
         </div>
         <div class="panel-body">
           <div class="grid" id="groupSettings"></div>
@@ -1146,7 +1157,7 @@
         review: ["審査入力", "団体を選び、審査員ごとに点数を入力します。"],
         ranking: ["集計ランキング", "団体ごとの合計点を点数順に表示します。"],
         details: ["審査明細", "審査員ごとの項目別点数とメモを確認します。"],
-        groups: ["団体設定", "団体名と応募部門を変更できます。"],
+        groups: ["団体設定", "団体の追加・削除、団体名と応募部門の変更ができます。"],
         criteria: ["審査項目設定", "部門ごとの審査項目名を変更できます。"],
         judges: ["審査員設定", "審査員名を変更できます。"]
       };
@@ -1271,7 +1282,7 @@
 
     function renderGroupSettings() {
       $("#groupSettings").innerHTML = state.groups.map((group, index) => `
-        <div class="criteria-row">
+        <div class="criteria-row group-setting-row">
           <div>
             <strong>${index + 1}. 団体</strong>
             <input type="text" data-group-name="${group.id}" value="${escapeAttr(group.name)}" aria-label="団体名">
@@ -1281,8 +1292,13 @@
               `<option value="${value}" ${group.division === value ? "selected" : ""}>${label}</option>`
             ).join("")}
           </select>
+          <button class="btn secondary" type="button" data-remove-group="${group.id}">削除</button>
         </div>
       `).join("");
+
+      $$("[data-remove-group]").forEach((button) => {
+        button.addEventListener("click", () => removeGroup(button.dataset.removeGroup).catch((error) => showToast(error.message)));
+      });
     }
 
     function renderCriteriaSettings() {
@@ -1389,16 +1405,78 @@
     }
 
     async function saveGroupSettings() {
-      state.groups = state.groups.map((group) => {
-        const name = $(`[data-group-name="${group.id}"]`).value.trim() || group.name;
-        const division = $(`[data-group-division="${group.id}"]`).value;
-        return { ...group, name, division };
-      });
+      syncGroupSettingsFromForm();
       setSaving(true);
       try {
         await saveState();
         render();
         showToast("団体設定を保存しました。");
+      } finally {
+        setSaving(false);
+      }
+    }
+
+    function syncGroupSettingsFromForm() {
+      state.groups = state.groups.map((group) => {
+        const nameInput = $(`[data-group-name="${group.id}"]`);
+        const divisionInput = $(`[data-group-division="${group.id}"]`);
+        const name = nameInput ? nameInput.value.trim() || group.name : group.name;
+        const division = divisionInput ? divisionInput.value : group.division;
+        return { ...group, name, division };
+      });
+    }
+
+    function createGroupId() {
+      const nextNumber = state.groups.reduce((max, group) => {
+        const match = /^group-(\d+)$/.exec(group.id);
+        return match ? Math.max(max, Number(match[1])) : max;
+      }, 0) + 1;
+      return `group-${nextNumber}`;
+    }
+
+    async function addGroup() {
+      syncGroupSettingsFromForm();
+      const nextIndex = state.groups.length + 1;
+      state.groups.push({
+        id: createGroupId(),
+        name: `団体${nextIndex}`,
+        division: "start"
+      });
+      setSaving(true, "団体を追加中...");
+      try {
+        await saveState();
+        render();
+        showToast("団体を追加しました。");
+      } finally {
+        setSaving(false);
+      }
+    }
+
+    async function removeGroup(groupId) {
+      syncGroupSettingsFromForm();
+      const group = state.groups.find((item) => item.id === groupId);
+      if (!group) return;
+      const hasReviews = Object.keys(state.scores).some((key) => key.startsWith(`${groupId}::`))
+        || Object.keys(state.memos).some((key) => key.startsWith(`${groupId}::`));
+      const message = hasReviews
+        ? `「${group.name}」を削除しますか？この団体の審査点数とメモも削除されます。`
+        : `「${group.name}」を削除しますか？`;
+      if (!confirm(message)) {
+        renderGroupSettings();
+        return;
+      }
+      state.groups = state.groups.filter((item) => item.id !== groupId);
+      Object.keys(state.scores).forEach((key) => {
+        if (key.startsWith(`${groupId}::`)) delete state.scores[key];
+      });
+      Object.keys(state.memos).forEach((key) => {
+        if (key.startsWith(`${groupId}::`)) delete state.memos[key];
+      });
+      setSaving(true, "団体を削除中...");
+      try {
+        await saveState();
+        render();
+        showToast("団体を削除しました。");
       } finally {
         setSaving(false);
       }
@@ -1603,6 +1681,7 @@
     $("#divisionFilter").addEventListener("change", renderGroupCards);
     $("#rankingFilter").addEventListener("change", renderRanking);
     $("#detailsFilter").addEventListener("change", renderDetails);
+    $("#addGroupBtn").addEventListener("click", () => addGroup().catch((error) => showToast(error.message)));
     $("#saveGroupsBtn").addEventListener("click", () => saveGroupSettings().catch((error) => showToast(error.message)));
     $("#saveCriteriaBtn").addEventListener("click", () => saveCriteriaSettings().catch((error) => showToast(error.message)));
     $("#saveJudgesBtn").addEventListener("click", () => saveJudgeSettings().catch((error) => showToast(error.message)));
